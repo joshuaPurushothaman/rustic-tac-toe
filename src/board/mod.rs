@@ -12,6 +12,7 @@ impl std::fmt::Display for Player {
     }
 }
 
+#[derive(PartialEq)]
 pub enum GameFinaleState {
     Win(Player),
     Draw,
@@ -54,8 +55,14 @@ impl Board {
         let i = self.index(x, y);
 
         match p {
-            Player::X => Ok(self.x_data |= 1 << i),
-            Player::O => Ok(self.y_data |= 1 << i),
+            Player::X => {
+                self.x_data |= 1 << i;
+                Ok(())
+            }
+            Player::O => {
+                self.y_data |= 1 << i;
+                Ok(())
+            }
         }
     }
 
@@ -82,7 +89,7 @@ impl Board {
             }
         }
 
-        return available_cells;
+        available_cells
     }
 
     // Simply checks all horizontal, all vertical, and both diagonals.
@@ -91,10 +98,11 @@ impl Board {
             let one = self.get_cell(x1, y1);
             let two = self.get_cell(x2, y2);
             let three = self.get_cell(x3, y3);
-            if one != None && one == two && two == three {
-                return one; // THE ONE AND ONLY!!! RAAAAAHHHH
+
+            if one.is_some() && one == two && two == three {
+                one // THE ONE AND ONLY!!! RAAAAAHHHH
             } else {
-                return None;
+                None
             }
         };
 
@@ -122,14 +130,24 @@ impl Board {
             return GameFinaleState::Win(p);
         }
 
-        // There must be no winner.
-        return GameFinaleState::Draw;
+        // If the board is full, it's a draw, else, game is still on!
+        if self.x_data & self.y_data == u16::MAX {
+            GameFinaleState::Draw
+        } else {
+            GameFinaleState::StillGoing
+        }
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl std::fmt::Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        // Using ═║╔ ╗╚ ╝╠ ╣╦ ╩ ╬ unicode (look for Char Map):
+        // Using ═║╔ ╗╚ ╝╠ ╣╦ ╩ ╬ unicode (look for Char Map on Windows):
         let mut s = String::from(
             "
             ╔═══╦═══╦═══╗

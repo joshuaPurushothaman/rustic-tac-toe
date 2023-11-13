@@ -1,5 +1,5 @@
-use personal_tic_tac_toe::board::*;
 use rand::seq::SliceRandom;
+use rustic_tac_toe::board::*;
 use std::io::{self, Write};
 
 // TODO: use piston instead :3
@@ -35,21 +35,18 @@ fn main() {
     // X has to play first...
     if computer_player == Player::X {
         // Instead of minimaxing the very first move, just hardcode center and corners as "decent" first moves
-        let good_first_moves = vec![(1, 1), (0, 0), (2, 0), (0, 2), (2, 2)];
+        let good_first_moves = [(1, 1), (0, 0), (2, 0), (0, 2), (2, 2)];
 
-        let computer_move = good_first_moves
-            .choose(&mut rand::thread_rng())
-            .expect("computer fail moment");
+        let computer_move = good_first_moves.choose(&mut rand::thread_rng()).unwrap();
 
         board
             .set_cell(computer_move.0, computer_move.1, computer_player)
             .unwrap();
     }
 
-    print!("\x1B[2J\x1B[1;1H"); // magical clearscreen :3
+    clear_screen();
 
-    let has_won = false;
-    while !has_won {
+    loop {
         println!("{board}");
 
         print!("What's your move? (Indexed at 0, formatted 'x y'): ");
@@ -79,7 +76,7 @@ fn main() {
             None => continue,
         };
 
-        if board.get_cell(x, y) == None {
+        if board.get_cell(x, y).is_none() {
             // Sort of okay to unwrap here for now... the "coord in range" case was handled already.
             board.set_cell(x, y, user_player).unwrap();
         } else {
@@ -87,7 +84,7 @@ fn main() {
         }
 
         // Check if the player's won by now.
-        if board.check_winner() == Some(user_player) {
+        if board.check_winner() == GameFinaleState::Win(user_player) {
             println!("{board}");
             println!("\n\nYou win as {user_player}!\n\n");
             break;
@@ -105,12 +102,17 @@ fn main() {
             .set_cell(computer_move.0, computer_move.1, computer_player)
             .unwrap();
 
-        print!("\x1B[2J\x1B[1;1H"); // magical clearscreen :3
+        clear_screen();
 
-        if board.check_winner() == Some(computer_player) {
+        if board.check_winner() == GameFinaleState::Win(computer_player) {
             println!("{board}");
             println!("\n\nComputer wins as {computer_player}!\n\n");
             break;
         }
     }
+}
+
+fn clear_screen() {
+    // magical clearscreen :3
+    print!("\x1B[2J\x1B[1;1H");
 }
