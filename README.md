@@ -1,3 +1,4 @@
+![Rust build status](https://github.com/joshuaPurushothaman/rustic-tac-toe/actions/workflows/rust.yml/badge.svg)
 # rustic-tac-toe
 Exploring Rust further with a Tic-Tac-Toe program!
 
