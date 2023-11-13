@@ -2,7 +2,6 @@ use rand::seq::SliceRandom;
 use rustic_tac_toe::board::*;
 use std::io::{self, Write};
 
-// TODO: use piston instead :3
 fn main() {
     let mut board = Board::new();
 
@@ -47,7 +46,7 @@ fn main() {
     clear_screen();
 
     loop {
-        println!("{board}");
+        println!("{board}"); // TODO: add colors in X/O output
 
         print!("What's your move? (Indexed at 0, formatted 'x y'): ");
         io::stdout().flush().unwrap();
@@ -56,23 +55,12 @@ fn main() {
 
         // rust strings are weird bc of UTF-8!
         // as_bytes() here assumes user entered ASCII...
-        let x = match (user_input.as_bytes()[0] as char).to_digit(10) {
-            Some(val) => match val {
-                0..=2 => val as i32,
-                _ => continue,
-            },
+        let x = match char_to_coord(user_input.as_bytes()[0] as char) {
+            Some(value) => value,
             None => continue,
         };
-        // TODO: i will never find a tidy way for this, lol.
-        // Maybe a "more proper" state mgmt system, taking the loop out?
-        // That way, we could use the ? operator to propagate errors...
-        // !!! edit: I MAY HAVE FOUND IT: `if let` is useful here!
-        // https://doc.rust-lang.org/rust-by-example/flow_control/if_let.html
-        let y = match (user_input.as_bytes()[2] as char).to_digit(10) {
-            Some(val) => match val {
-                0..=2 => val as i32,
-                _ => continue, // TODO: could care a tiny bit more and tell the user. lol
-            },
+        let y = match char_to_coord(user_input.as_bytes()[2] as char) {
+            Some(value) => value,
             None => continue,
         };
 
@@ -89,14 +77,14 @@ fn main() {
             println!("\n\nYou win as {user_player}!\n\n");
             break;
         }
+        
+        if board.check_winner() == GameFinaleState::Draw {
+            println!("{board}");
+            println!("\n\nDraw!\n\n");
+            break;
+        }
 
-        // Computer now makes a move!
-        let available_cells = board.get_available_cells();
-
-        // TODO MINIMAX!!!
-        let computer_move = available_cells
-            .choose(&mut rand::thread_rng())
-            .expect("computer fail moment");
+        let computer_move = minimax(&board, computer_player, (x, y)).coord.unwrap();
 
         board
             .set_cell(computer_move.0, computer_move.1, computer_player)
@@ -108,11 +96,96 @@ fn main() {
             println!("{board}");
             println!("\n\nComputer wins as {computer_player}!\n\n");
             break;
+        } else if board.check_winner() == GameFinaleState::Draw {
+            println!("{board}");
+            println!("\n\nDraw!\n\n");
+            break;
         }
+    }
+}
+fn char_to_coord(user_input: char) -> Option<i32> {
+    match user_input.to_digit(10) {
+        Some(val) => match val {
+            0..=2 => Some(val as i32),
+            _ => None,
+        },
+        None => None,
     }
 }
 
 fn clear_screen() {
     // magical clearscreen :3
-    print!("\x1B[2J\x1B[1;1H");
+    // print!("\x1B[2J\x1B[1;1H");
+}
+
+#[derive(Clone, Copy)]
+struct ScoredMove {
+    coord: Option<(i32, i32)>,
+    score: i32,
+}
+
+// TODO: figure out what the heck is happening here, and if it is working, then WHY
+fn minimax(board: &Board, player: Player, uhh_coord: (i32, i32)) -> ScoredMove {
+    if board.check_winner() != GameFinaleState::StillGoing {
+        return ScoredMove {
+            coord: Some(uhh_coord),
+            score: score(*board, player),
+        };
+    }
+
+    let opponent = match player {
+        Player::X => Player::O,
+        Player::O => Player::X,
+    };
+
+    let potential_moves = board.get_available_cells();
+    let mut scored_moves: Vec<ScoredMove> = vec![];
+
+    // testing...
+    if potential_moves.is_empty() && board.check_winner() == GameFinaleState::StillGoing {
+        panic!("AHHH");
+    }
+
+    for potential_move in potential_moves {
+        let mut hypothetical_board = *board; // rely on Copy trait :)
+
+        hypothetical_board
+            .set_cell(potential_move.0, potential_move.1, player)
+            .unwrap();
+
+        let value = minimax(&hypothetical_board, opponent, potential_move);
+        scored_moves.push(value);
+    }
+
+    if board.get_active_turn().unwrap() == player {
+        *scored_moves.iter().min_by_key(|sm| sm.score).unwrap()
+    } else {
+        *scored_moves.iter().min_by_key(|sm| sm.score).unwrap()
+    }
+}
+
+/// Remember, `score()` is called on end states of the game.
+fn score(board: Board, player: Player) -> i32 {
+    let win_score = 1;
+    let draw_score = 0;
+    let lose_score = -1;
+
+    let winner = board.check_winner();
+    let opponent = match player {
+        Player::X => Player::O,
+        Player::O => Player::X,
+    };
+
+    if winner == GameFinaleState::Win(player) {
+        // print!("W"); // FIXME: !!! Why isn't it seeing any wins?!
+        win_score
+    } else if winner == GameFinaleState::Draw {
+        // print!("D"); // TODO: use dbg!() and inspect https://dhghomon.github.io/easy_rust/Chapter_38.html
+        draw_score
+    } else if winner == GameFinaleState::Win(opponent) {
+        // print!("L");
+        lose_score
+    } else {
+        panic!("score() was called in a StillGoing game. player: {player}, board: {board}");
+    }
 }

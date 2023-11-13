@@ -19,16 +19,17 @@ pub enum GameFinaleState {
     StillGoing,
 }
 
+#[derive(Clone, Copy)]
 pub struct Board {
     x_data: u16,
-    y_data: u16,
+    o_data: u16,
 }
 
 impl Board {
     pub fn new() -> Self {
         Self {
             x_data: 0,
-            y_data: 0,
+            o_data: 0,
         }
     }
 
@@ -44,6 +45,10 @@ impl Board {
             _ => return Err("Out of bounds"),
         }
 
+        if self.get_cell(x, y).is_some() {
+            return Err("Cell already filled!");
+        }
+
         let i = self.index(x, y);
 
         match p {
@@ -52,7 +57,7 @@ impl Board {
                 Ok(())
             }
             Player::O => {
-                self.y_data |= 1 << i;
+                self.o_data |= 1 << i;
                 Ok(())
             }
         }
@@ -63,7 +68,7 @@ impl Board {
 
         if ((self.x_data >> i) & 0b01) == 1 {
             Some(Player::X)
-        } else if ((self.y_data >> i) & 0b01) == 1 {
+        } else if ((self.o_data >> i) & 0b01) == 1 {
             Some(Player::O)
         } else {
             None
@@ -123,10 +128,46 @@ impl Board {
         }
 
         // If the board is full, it's a draw, else, game is still on!
-        if self.x_data & self.y_data == u16::MAX {
+        if self.x_data | self.o_data == 0b_0000_0001_1111_1111 {
             GameFinaleState::Draw
         } else {
             GameFinaleState::StillGoing
+        }
+    }
+
+    pub fn get_active_turn(&self) -> Option<Player> {
+        // Uh. Welp
+        let mut xs = 0;
+        let mut os = 0;
+
+        for y in 0..3 {
+            for x in 0..3 {
+                let cell = self.get_cell(x, y);
+
+                if let Some(player) = cell {
+                    match player {
+                        Player::X => xs += 1,
+                        Player::O => os += 1,
+                    }
+                }
+            }
+        }
+
+        // if xs > os {
+        //     Some(Player::X)
+        // } else if os > xs {
+        //     Some(Player::O)
+        // } else {
+        //     None
+        // }
+
+        // Okay, just for you, clippy my beloved <3
+        use std::cmp::Ordering::*;
+
+        match xs.cmp(&os) {
+            Less => Some(Player::O),
+            Equal => Some(Player::X), // since I assume X always goes first
+            Greater => Some(Player::X),
         }
     }
 }
@@ -150,6 +191,17 @@ impl std::fmt::Display for Board {
             ║ 6 ║ 7 ║ 8 ║
             ╚═══╩═══╩═══╝",
         );
+        // // Using ═║╔ ╗╚ ╝╠ ╣╦ ╩ ╬ unicode (look for Char Map on Windows):
+        // let mut s = String::from(
+        //     "
+        //     -------------
+        //     | 0 | 1 | 2 |
+        //     -------------
+        //     | 3 | 4 | 5 |
+        //     -------------
+        //     | 6 | 7 | 8 |
+        //     -------------",
+        // );
 
         for y in 0..3 {
             for x in 0..3 {
