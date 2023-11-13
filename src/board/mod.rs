@@ -32,16 +32,8 @@ impl Board {
         }
     }
 
-    /// Example:
-    /// ```
-    /// index(x=1, y=2)
-    ///     == (2 * 3) + 1
-    ///     == 7
-    ///
-    /// 0 1 2
-    /// 3 4 5
-    /// 6 7 8
-    /// ```
+    /// Indexes into a "1d array" using 2d coords.
+    /// `index(1, 2) = (2 * 3) + 1 = 7`
     pub fn index(&self, x: i32, y: i32) -> i32 {
         (y * 3) + x
     }
