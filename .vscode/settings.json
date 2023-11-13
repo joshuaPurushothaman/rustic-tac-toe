@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "xstring": "cpp"
+    },
+    "rust-analyzer.linkedProjects": [
+        ".\\Cargo.toml"
+    ]
+}

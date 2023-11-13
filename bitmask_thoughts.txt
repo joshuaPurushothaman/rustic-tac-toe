@@ -1,0 +1,48 @@
+Total technical number of Tic-Tac-Toe states
+(ignoring invalid board states, ex.: XXXOOOXXX which couldn't have been reached in "normal play")
+
+Each cell has three states, 9 cells => 3^9
+
+log2(3^9) = 14.265 => Any state can be encoded in at most 16 bits *somehow*.
+However, this may not be the most *useful* encoding of states - it may be harder to decode or encode;
+hence the 18 bit protocol described below.
+
+---
+A simple approach with 18 bits: 9 bits for a grid of Os and
+9 bits for a "overlay" grid of Xs.
+
+Easy to access, easy to encode and decode to meaningful states.
+
+Example grid and bitmask with steps:
+X O X
+_ X O
+_ _ X
+
+1. Isolate Xs and Os.
+X   X   |     O 
+  X     |       O
+    X   |
+
+2. Encode separately into bits, where each 1 indicates the presence of an X or O in that spot (in their respective grids).
+101     |   010
+010     |   001
+001     |   000
+
+3. Write the X grid in one line
+101 010 001
+
+4. Same for O grid
+010 001 000
+
+5. Os then Xs (such that the rightmost digits are X, and would be "encountered" first when doing bit math)
+010 001 000   101 010 001
+
+=> This is a binary number; here it is reformatted:
+01 0001 0001 0101 0001
+=> In 32 bit storage:
+0000 0000 0000 0001 0001 0001 0101 0001
+
+Seems a bit odd to store it like this *in code* (maybe not in the file format).
+=> Can just have the code have x_data and o_data from steps 3 and 4.
+    When exporting to files, it would be written (and later read) as X, then O.
+    After all, the whole system depends on them staying separate.
